@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset=utf-8>
+		<title>My first three.js app</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+		</style>
+	</head>
+	<body>
+		<div id="container"></div>
+		<script src="js/three.js"></script>
+
+		<script>
+		var container;
+		var camera;
+		var scene;
+		var renderer;
+		var mesh;
+
+		var mass_earth = 29740334;
+		var gravity = 1;
+		var dt = (1/60);
+		var r;
+		var r1;
+		var r2;
+		var r3;
+
+		var x1 = 0;
+		var y1 = -420;
+		var z1 = 0;
+
+		var vx1 = 0;
+		var vy1 = 0;
+		var vz1 = 240;
+
+		var ax1;
+		var ay1;
+		var az1;
+
+		var r_x1;
+		var r_y1;
+		var r_z1;
+
+		var x2 = 420;
+		var y2 = 0;
+		var z2 = 0;
+
+		var vx2 = 0;
+		var vy2 = 240;
+		var vz2 = 0;
+
+		var ax2;
+		var ay2;
+		var az2;
+
+		var x3 = -420;
+		var y3 = 0;
+		var z3 = 0;
+
+		var vx3 = 0;
+		var vy3 = 0;
+		var vz3 = 240;
+
+		var ax3;
+		var ay3;
+		var az3;
+
+		var r_x3;
+		var r_y3;
+		var r_z3;
+
+
+		var r_x2;
+		var r_y2;
+		var r_z2;
+
+		var r_x;
+		var r_y;
+		var r_z;
+
+		var acc_x;
+		var acc_y;
+		var acc_z;
+
+		// attributes defined golballly
+		var triangles = 28;
+		var geometry = new THREE.BufferGeometry();
+		var positions = new Float32Array( triangles * 3 * 3 );
+		var velocities = new Float32Array( triangles * 3 );
+		var normals = new Float32Array( triangles * 3 * 3 );
+		var colors = new Float32Array( triangles * 3 * 3 );
+		geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ));
+		geometry.addAttribute( 'velocity', new THREE.BufferAttribute( velocities, 3 ));
+		geometry.addAttribute( 'normal', new THREE.BufferAttribute( normals, 3 ));
+		geometry.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ));
+		geometry.computeBoundingSphere();
+
+		init();
+		animate();
+		function init() {
+			container = document.getElementById( 'container' );
+
+			camera = new THREE.PerspectiveCamera( 27, window.innerWidth / window.innerHeight, 1, 3500 );
+			camera.position.set(0, 0, 2750);
+
+			scene = new THREE.Scene();
+			scene.background = new THREE.Color( 0x050505 );
+
+			scene.add( new THREE.AmbientLight( 0x444444 ) );
+
+			var light1 = new THREE.DirectionalLight( 0xffffff, 0.5 );
+			light1.position.set( 1, 1, 1 );
+			scene.add( light1 );
+
+			var light2 = new THREE.DirectionalLight( 0xffffff, 1.5 );
+			light2.position.set( 0, -1, 0 );
+			scene.add( light2 );
+
+			var color = new THREE.Color();
+			var n = 800, n2 = n/2;	// triangles spread in the cube - range for random elements in array
+			var d = 100, d2 = d/2;	// individual triangle size
+			var pA = new THREE.Vector3(); // undefined THREE.Vector3() automatically assignes ( 0, 0, 0 )
+			var pB = new THREE.Vector3(); // the vector elements are assigned later in the normal array
+			var pC = new THREE.Vector3();
+			var cb = new THREE.Vector3();
+			var ab = new THREE.Vector3();
+			for ( var i = 0; i < positions.length; i += 9 ) // each individual triangle is defined by 9 elements (3 vertices) in the array
+			 {
+
+				// positions
+				var x = 0;
+				var y = 420;
+				var z = 0;
+
+				//var x = Math.random() * n - n2;
+				//var y = Math.random() * n - n2;
+				//var z = Math.random() * n - n2;
+
+				//
+				var ax = x + Math.random() * d - d2;
+				var ay = y + Math.random() * d - d2;
+				var az = z + Math.random() * d - d2; // all elements in vertex a defined
+				var bx = x + Math.random() * d - d2;
+				var by = y + Math.random() * d - d2;
+				var bz = z + Math.random() * d - d2; // all elements in vertex b defined
+				var cx = x + Math.random() * d - d2;
+				var cy = y + Math.random() * d - d2;
+				var cz = z + Math.random() * d - d2; // all elements in vertex c defined
+				//
+				positions[ i ]		 = ax;
+				positions[ i + 1 ] = ay;
+				positions[ i + 2 ] = az;
+				positions[ i + 3 ] = bx;
+				positions[ i + 4 ] = by;
+				positions[ i + 5 ] = bz;
+				positions[ i + 6 ] = cx;
+				positions[ i + 7 ] = cy;
+				positions[ i + 8 ] = cz;
+
+				// flat face normals
+				pA.set( ax, ay, az ); // assigning elements to THREE.Vector3()
+				pB.set( bx, by, bz );
+				pC.set( cx, cy, cz );
+
+				cb.subVectors( pC, pB );
+				ab.subVectors( pA, pB );
+				cb.cross( ab );
+				cb.normalize();
+
+				var nx = cb.x;
+				var ny = cb.y;
+				var nz = cb.z;
+
+				normals[ i ]     = nx; // assigning the normals to the normal array
+				normals[ i + 1 ] = ny;
+				normals[ i + 2 ] = nz;
+				normals[ i + 3 ] = nx;
+				normals[ i + 4 ] = ny;
+				normals[ i + 5 ] = nz;
+				normals[ i + 6 ] = nx;
+				normals[ i + 7 ] = ny;
+				normals[ i + 8 ] = nz; // changing the normals will change the was we view the triangles
+
+				// colors
+				var vx = ( x / n ) + 0.5;
+				var vy = ( y / n ) + 0.5;
+				var vz = ( z / n ) + 0.5;
+				color.setRGB( vx, vy, vz );
+				colors[ i ]     = color.r;
+				colors[ i + 1 ] = color.g;
+				colors[ i + 2 ] = color.b;
+				colors[ i + 3 ] = color.r;
+				colors[ i + 4 ] = color.g;
+				colors[ i + 5 ] = color.b;
+				colors[ i + 6 ] = color.r;
+				colors[ i + 7 ] = color.g;
+				colors[ i + 8 ] = color.b;
+			}
+			for ( var i = 0; i < velocities.length; i +=3 ) {
+				velocities[ i ]     = 240;
+				velocities[ i + 1 ]	= 0;
+				velocities[ i + 2 ]	= 0;
+			}
+			var material = new THREE.MeshPhongMaterial( {  // MeshPhongMaterial - a material for shiney surfaces with 'spectacular' highlights
+				color: 0xaaaaaa, specular: 0xffffff, shininess: 250,
+				side: THREE.DoubleSide, vertexColors: THREE.VertexColors
+			} );
+			mesh = new THREE.Mesh( geometry, material );
+			scene.add( mesh );
+			//
+			renderer = new THREE.WebGLRenderer( { antialias: false } );
+			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.gammaInput = true;
+			renderer.gammaOutput = true;
+			container.appendChild( renderer.domElement );
+			//
+			window.addEventListener( 'resize', onWindowResize, false );
+		}
+		// end of init function
+		function render() {
+			var time = Date.now() * 0.001;
+			mesh.rotation.x = time * 0.25; // velocity of x components are constant with time
+			mesh.rotation.y = time * 0.5;
+			renderer.render( scene, camera );
+
+			geometry.attributes.position.array[ 0 ] = positions[0];
+			geometry.attributes.position.array[ 1 ] = positions[1];
+			geometry.attributes.position.array[ 2 ] = positions[2];
+			geometry.attributes.position.array[ 3 ] = positions[0] + 30;
+			geometry.attributes.position.array[ 4 ] = positions[1] - 40;
+			geometry.attributes.position.array[ 5 ] = positions[2];
+			geometry.attributes.position.array[ 6 ] = positions[0] -30;
+			geometry.attributes.position.array[ 7 ] = positions[1] -40;
+			geometry.attributes.position.array[ 8 ] = positions[2];
+
+			geometry.attributes.position.array[ 9 ] = x1;
+			geometry.attributes.position.array[ 10 ] = y1;
+			geometry.attributes.position.array[ 11 ] = z1;
+			geometry.attributes.position.array[ 12 ] = x1 + 30;
+			geometry.attributes.position.array[ 13 ] = y1 - 40;
+			geometry.attributes.position.array[ 14 ] = z1;
+			geometry.attributes.position.array[ 15 ] = x1 -30;
+			geometry.attributes.position.array[ 16 ] = y1 -40;
+			geometry.attributes.position.array[ 17 ] = z1;
+
+			geometry.attributes.position.array[ 18 ] = x2;
+			geometry.attributes.position.array[ 19 ] = y2;
+			geometry.attributes.position.array[ 20 ] = z2;
+			geometry.attributes.position.array[ 21 ] = x2 + 30;
+			geometry.attributes.position.array[ 22 ] = y2 - 40;
+			geometry.attributes.position.array[ 23 ] = z2;
+			geometry.attributes.position.array[ 24 ] = x2 -30;
+			geometry.attributes.position.array[ 25 ] = y2 -40;
+			geometry.attributes.position.array[ 26 ] = z2;
+
+			geometry.attributes.position.array[ 27 ] = x3;
+			geometry.attributes.position.array[ 28 ] = y3;
+			geometry.attributes.position.array[ 29 ] = z3;
+			geometry.attributes.position.array[ 30 ] = x3 + 30;
+			geometry.attributes.position.array[ 31 ] = y3 - 40;
+			geometry.attributes.position.array[ 32 ] = z3;
+			geometry.attributes.position.array[ 33 ] = x3 -30;
+			geometry.attributes.position.array[ 34 ] = y3 -40;
+			geometry.attributes.position.array[ 35 ] = z3;
+
+			for ( var i = 36; i < geometry.attributes.position.array.length; i += 252 ) {
+				// block 1
+				geometry.attributes.position.array[ i ] = 90;
+				geometry.attributes.position.array[ i + 1 ] = 0;
+				geometry.attributes.position.array[ i + 2 ] = 0;
+
+				geometry.attributes.position.array[ i + 3 ] = 0;
+				geometry.attributes.position.array[ i + 4 ] = 90;
+				geometry.attributes.position.array[ i + 5 ] = 0;
+				geometry.attributes.position.array[ i + 6 ] = 64;
+				geometry.attributes.position.array[ i + 7 ] = 64;
+				geometry.attributes.position.array[ i + 8 ] = 64;
+				geometry.attributes.position.array[ i + 9 ] = 90;
+				geometry.attributes.position.array[ i + 10 ] = 0;
+				geometry.attributes.position.array[ i + 11 ] = 0;
+				geometry.attributes.position.array[ i + 12 ] = 64;
+				geometry.attributes.position.array[ i + 13 ] = 64;
+				geometry.attributes.position.array[ i + 14 ] = 64;
+				geometry.attributes.position.array[ i + 15 ] = 0;
+				geometry.attributes.position.array[ i + 16 ] = 0;
+				geometry.attributes.position.array[ i + 17 ] = 90;
+				geometry.attributes.position.array[ i + 18 ] = 64;
+				geometry.attributes.position.array[ i + 19 ] = 64;
+				geometry.attributes.position.array[ i + 20 ] = 64;
+				geometry.attributes.position.array[ i + 21 ] = 0;
+			  geometry.attributes.position.array[ i + 22 ] = 90;
+				geometry.attributes.position.array[ i + 23 ] = 0;
+				geometry.attributes.position.array[ i + 24 ] = 0;
+				geometry.attributes.position.array[ i + 25 ] = 0;
+				geometry.attributes.position.array[ i + 26 ] = 90;
+
+				// block 2
+				geometry.attributes.position.array[ i + 27 ] = 90;
+				geometry.attributes.position.array[ i + 28 ] = 0;
+				geometry.attributes.position.array[ i + 29 ] = 0;
+				geometry.attributes.position.array[ i + 30 ] = 0;
+			  geometry.attributes.position.array[ i + 31 ] = 90;
+				geometry.attributes.position.array[ i + 32 ] = 0;
+				geometry.attributes.position.array[ i + 33 ] = 64;
+				geometry.attributes.position.array[ i + 34 ] = 64;
+				geometry.attributes.position.array[ i + 35 ] = -64;
+				geometry.attributes.position.array[ i + 36 ] = 90;
+				geometry.attributes.position.array[ i + 37 ] = 0;
+				geometry.attributes.position.array[ i + 38 ] = 0;
+				geometry.attributes.position.array[ i + 39 ] = 64;
+			  geometry.attributes.position.array[ i + 40 ] = 64;
+				geometry.attributes.position.array[ i + 41 ] = -64;
+				geometry.attributes.position.array[ i + 42 ] = 0;
+				geometry.attributes.position.array[ i + 43 ] = 0;
+				geometry.attributes.position.array[ i + 44 ] = -90;
+				geometry.attributes.position.array[ i + 45 ] = 64;
+				geometry.attributes.position.array[ i + 46 ] = 64;
+				geometry.attributes.position.array[ i + 47 ] = -64;
+				geometry.attributes.position.array[ i + 48 ] = 0;
+			  geometry.attributes.position.array[ i + 49 ] = 90;
+				geometry.attributes.position.array[ i + 50 ] = 0;
+				geometry.attributes.position.array[ i + 51 ] = 0;
+				geometry.attributes.position.array[ i + 52 ] = 0;
+				geometry.attributes.position.array[ i + 53 ] = -90;
+
+				// Block 3
+				geometry.attributes.position.array[ i + 54 ] = -90;
+				geometry.attributes.position.array[ i + 55 ] = 0;
+				geometry.attributes.position.array[ i + 56 ] = 0;
+				geometry.attributes.position.array[ i + 57 ] = 0;
+			  geometry.attributes.position.array[ i + 58 ] = 90;
+				geometry.attributes.position.array[ i + 59 ] = 0;
+				geometry.attributes.position.array[ i + 60 ] = -64;
+				geometry.attributes.position.array[ i + 61 ] = 64;
+				geometry.attributes.position.array[ i + 62 ] = -64;
+				geometry.attributes.position.array[ i + 63 ] = -90;
+				geometry.attributes.position.array[ i + 64 ] = 0;
+				geometry.attributes.position.array[ i + 65 ] = 0;
+				geometry.attributes.position.array[ i + 66 ] = -64;
+			  geometry.attributes.position.array[ i + 67 ] = 64;
+				geometry.attributes.position.array[ i + 68 ] = -64;
+				geometry.attributes.position.array[ i + 69 ] = 0;
+				geometry.attributes.position.array[ i + 70 ] = 0;
+				geometry.attributes.position.array[ i + 71 ] = -90;
+				geometry.attributes.position.array[ i + 72 ] = -64;
+				geometry.attributes.position.array[ i + 73 ] = 64;
+				geometry.attributes.position.array[ i + 74 ] = -64;
+				geometry.attributes.position.array[ i + 75 ] = 0;
+			  geometry.attributes.position.array[ i + 76 ] = 90;
+				geometry.attributes.position.array[ i + 77 ] = 0;
+				geometry.attributes.position.array[ i + 78 ] = 0;
+				geometry.attributes.position.array[ i + 79 ] = 0;
+				geometry.attributes.position.array[ i + 80 ] = -90;
+
+				// Block 4
+				geometry.attributes.position.array[ i + 81 ] = -90;
+				geometry.attributes.position.array[ i + 82 ] = 0;
+				geometry.attributes.position.array[ i + 83 ] = 0;
+				geometry.attributes.position.array[ i + 84 ] = 0;
+			  geometry.attributes.position.array[ i + 85 ] = 90;
+				geometry.attributes.position.array[ i + 86 ] = 0;
+				geometry.attributes.position.array[ i + 87 ] = -64;
+				geometry.attributes.position.array[ i + 88 ] = 64;
+				geometry.attributes.position.array[ i + 89 ] = 64;
+				geometry.attributes.position.array[ i + 90 ] = -90;
+				geometry.attributes.position.array[ i + 91 ] = 0;
+				geometry.attributes.position.array[ i + 92 ] = 0;
+				geometry.attributes.position.array[ i + 93 ] = -64;
+			  geometry.attributes.position.array[ i + 94 ] = 64;
+				geometry.attributes.position.array[ i + 95 ] = 64;
+				geometry.attributes.position.array[ i + 96 ] = 0;
+				geometry.attributes.position.array[ i + 97 ] = 0;
+				geometry.attributes.position.array[ i + 98 ] = 90;
+				geometry.attributes.position.array[ i + 99 ] = -64;
+				geometry.attributes.position.array[ i + 100 ] = 64;
+				geometry.attributes.position.array[ i + 101 ] = 64;
+				geometry.attributes.position.array[ i + 102 ] = 0;
+				geometry.attributes.position.array[ i + 103 ] = 90;
+				geometry.attributes.position.array[ i + 104 ] = 0;
+				geometry.attributes.position.array[ i + 105 ] = 0;
+				geometry.attributes.position.array[ i + 106 ] = 0;
+				geometry.attributes.position.array[ i + 107 ] = 90;
+
+				// Block 5
+				geometry.attributes.position.array[ i + 108 ] = 90;
+				geometry.attributes.position.array[ i + 109 ] = 0;
+				geometry.attributes.position.array[ i + 110 ] = 0;
+				geometry.attributes.position.array[ i + 111 ] = 0;
+				geometry.attributes.position.array[ i + 112 ] = -90;
+				geometry.attributes.position.array[ i + 113 ] = 0;
+				geometry.attributes.position.array[ i + 114 ] = 64;
+				geometry.attributes.position.array[ i + 115 ] = -64;
+				geometry.attributes.position.array[ i + 116 ] = 64;
+				geometry.attributes.position.array[ i + 117 ] = 90;
+				geometry.attributes.position.array[ i + 118 ] = 0;
+				geometry.attributes.position.array[ i + 119 ] = 0;
+				geometry.attributes.position.array[ i + 120 ] = 64;
+				geometry.attributes.position.array[ i + 121 ] = -64;
+			  geometry.attributes.position.array[ i + 122 ] = 64;
+				geometry.attributes.position.array[ i + 123 ] = 0;
+				geometry.attributes.position.array[ i + 124 ] = 0;
+				geometry.attributes.position.array[ i + 125 ] = 90;
+				geometry.attributes.position.array[ i + 126 ] = 64;
+				geometry.attributes.position.array[ i + 127 ] = -64;
+				geometry.attributes.position.array[ i + 128 ] = 64;
+				geometry.attributes.position.array[ i + 129 ] = 0;
+				geometry.attributes.position.array[ i + 130 ] = -90;
+			  geometry.attributes.position.array[ i + 131 ] = 0;
+				geometry.attributes.position.array[ i + 132 ] = 0;
+				geometry.attributes.position.array[ i + 133 ] = 0;
+				geometry.attributes.position.array[ i + 134 ] = 90;
+
+				// Block 6
+				geometry.attributes.position.array[ i + 135 ] = 90;
+				geometry.attributes.position.array[ i + 136 ] = 0;
+				geometry.attributes.position.array[ i + 137 ] = 0;
+				geometry.attributes.position.array[ i + 138 ] = 0;
+				geometry.attributes.position.array[ i + 139 ] = -90;
+			  geometry.attributes.position.array[ i + 140 ] = 0;
+				geometry.attributes.position.array[ i + 141 ] = 64;
+				geometry.attributes.position.array[ i + 142 ] = -64;
+				geometry.attributes.position.array[ i + 143 ] = -64;
+				geometry.attributes.position.array[ i + 144 ] = 90;
+				geometry.attributes.position.array[ i + 145 ] = 0;
+				geometry.attributes.position.array[ i + 146 ] = 0;
+				geometry.attributes.position.array[ i + 147 ] = 64;
+				geometry.attributes.position.array[ i + 148 ] = -64;
+			  geometry.attributes.position.array[ i + 149 ] = -64;
+				geometry.attributes.position.array[ i + 150 ] = 0;
+				geometry.attributes.position.array[ i + 151 ] = 0;
+				geometry.attributes.position.array[ i + 152 ] = -90;
+				geometry.attributes.position.array[ i + 153 ] = 64;
+				geometry.attributes.position.array[ i + 154 ] = -64;
+				geometry.attributes.position.array[ i + 155 ] = -64;
+				geometry.attributes.position.array[ i + 156 ] = 0;
+				geometry.attributes.position.array[ i + 157 ] = -90;
+			  geometry.attributes.position.array[ i + 158 ] = 0;
+				geometry.attributes.position.array[ i + 159 ] = 0;
+				geometry.attributes.position.array[ i + 160 ] = 0;
+				geometry.attributes.position.array[ i + 161 ] = -90;
+
+				// Block 7
+				geometry.attributes.position.array[ i + 162 ] = -90;
+				geometry.attributes.position.array[ i + 163 ] = 0;
+				geometry.attributes.position.array[ i + 164 ] = 0;
+				geometry.attributes.position.array[ i + 165 ] = 0;
+				geometry.attributes.position.array[ i + 166 ] = -90;
+			  geometry.attributes.position.array[ i + 167 ] = 0;
+				geometry.attributes.position.array[ i + 168 ] = -64;
+				geometry.attributes.position.array[ i + 169 ] = -64;
+				geometry.attributes.position.array[ i + 170 ] = -64;
+				geometry.attributes.position.array[ i + 171 ] = -90;
+				geometry.attributes.position.array[ i + 172 ] = 0;
+				geometry.attributes.position.array[ i + 173 ] = 0;
+				geometry.attributes.position.array[ i + 174 ] = -64;
+				geometry.attributes.position.array[ i + 175 ] = -64;
+			  geometry.attributes.position.array[ i + 176 ] = -64;
+				geometry.attributes.position.array[ i + 177 ] = 0;
+				geometry.attributes.position.array[ i + 178 ] = 0;
+				geometry.attributes.position.array[ i + 179 ] = -90;
+				geometry.attributes.position.array[ i + 180 ] = -64;
+				geometry.attributes.position.array[ i + 181 ] = -64;
+				geometry.attributes.position.array[ i + 182 ] = -64;
+				geometry.attributes.position.array[ i + 183 ] = 0;
+				geometry.attributes.position.array[ i + 184 ] = -90;
+			  geometry.attributes.position.array[ i + 185 ] = 0;
+				geometry.attributes.position.array[ i + 186 ] = 0;
+				geometry.attributes.position.array[ i + 187 ] = 0;
+				geometry.attributes.position.array[ i + 188 ] = -90;
+
+				// Block 8
+				geometry.attributes.position.array[ i + 189 ] = -90;
+				geometry.attributes.position.array[ i + 190 ] = 0;
+				geometry.attributes.position.array[ i + 191 ] = 0;
+				geometry.attributes.position.array[ i + 192 ] = 0;
+				geometry.attributes.position.array[ i + 193 ] = -90;
+			  geometry.attributes.position.array[ i + 194 ] = 0;
+				geometry.attributes.position.array[ i + 195 ] = -64;
+				geometry.attributes.position.array[ i + 196 ] = -64;
+				geometry.attributes.position.array[ i + 197 ] = 64;
+				geometry.attributes.position.array[ i + 198 ] = -90;
+				geometry.attributes.position.array[ i + 199 ] = 0;
+				geometry.attributes.position.array[ i + 200 ] = 0;
+				geometry.attributes.position.array[ i + 201 ] = -64;
+				geometry.attributes.position.array[ i + 202 ] = -64;
+				geometry.attributes.position.array[ i + 203 ] = 64;
+				geometry.attributes.position.array[ i + 204 ] = 0;
+				geometry.attributes.position.array[ i + 205 ] = 0;
+				geometry.attributes.position.array[ i + 206 ] = 90;
+				geometry.attributes.position.array[ i + 207 ] = -64;
+				geometry.attributes.position.array[ i + 208 ] = -64;
+				geometry.attributes.position.array[ i + 209 ] = 64;
+				geometry.attributes.position.array[ i + 210 ] = 0;
+				geometry.attributes.position.array[ i + 211 ] = -90;
+				geometry.attributes.position.array[ i + 212 ] = 0;
+				geometry.attributes.position.array[ i + 213 ] = 0;
+				geometry.attributes.position.array[ i + 214 ] = 0;
+				geometry.attributes.position.array[ i + 215 ] = 90;
+				}
+
+			geometry.attributes.position.needsUpdate = true;
+		}
+		function onWindowResize() {
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize( window.innerWidth, window.innerHeight );
+		}
+		//
+		function animate() {
+			requestAnimationFrame( animate );
+			render();
+			updateUnitVector();
+			updateForce();
+			updateAcceleration();
+			updateVelocity();
+			updatePosition();
+		}
+		function updateUnitVector(){
+			r_x =  positions[0];
+			r_y =  positions[1];
+			r_z =  positions[2];
+
+			r = Math.sqrt(positions[0]*positions[0]+positions[1]*positions[1]+positions[2]*positions[2]);
+
+			r_x1 =  x1;
+			r_y1 =  y1;
+			r_z1 =  z1;
+
+			r1 = Math.sqrt(x1*x1+y1*y1+z1*z1);
+
+			r_x2 =  x2;
+			r_y2 =  y2;
+			r_z2 =  z2;
+
+			r2 = Math.sqrt(x2*x2+y2*y2+z2*z2);
+
+			r_x3 =  x3;
+			r_y3 =  y3;
+			r_z3 =  z3;
+
+			r3 = Math.sqrt(x3*x3+y3*y3+z3*z3);
+		}
+
+		function updateForce(){
+			force = -gravity*mass_earth/(r*r);
+
+			force1 = -gravity*mass_earth/(r1*r1);
+
+			force2 = -gravity*mass_earth/(r2*r2);
+
+			force3 = -gravity*mass_earth/(r3*r3);
+		}
+		function updateAcceleration(){
+			acc_x = (r_x/r)*force;
+			acc_y = (r_y/r)*force;
+			acc_z = (r_z/r)*force;
+
+			ax1 = (r_x1/r1)*force1;
+			ay1 = (r_y1/r1)*force1;
+			az1 = (r_z1/r1)*force1;
+
+			ax2 = (r_x2/r2)*force2;
+			ay2 = (r_y2/r2)*force2;
+			az2 = (r_z2/r2)*force2;
+
+			ax3 = (r_x3/r3)*force3;
+			ay3 = (r_y3/r3)*force3;
+			az3 = (r_z3/r3)*force3;
+		}
+		function updateVelocity(){
+			velocities[0] += acc_x * dt;
+			velocities[1] += acc_y * dt;
+			velocities[2] += acc_z * dt;
+
+			vx1 += ax1 * dt;
+			vy1 += ay1 * dt;
+			vz1 += az1 * dt;
+
+			vx2 += ax2 * dt;
+			vy2 += ay2 * dt;
+			vz2 += az2 * dt;
+
+			vx3 += ax3 * dt;
+			vy3 += ay3 * dt;
+			vz3 += az3 * dt;
+		}
+		function updatePosition(){
+			positions[0] += velocities[0] * dt;
+			positions[1] += velocities[1] * dt;
+			positions[2] += velocities[2] * dt;
+
+			x1 += vx1 * dt;
+			y1 += vy1 * dt;
+			z1 += vz1 * dt;
+
+			x2 += vx2 * dt;
+			y2 += vy2 * dt;
+			z2 += vz2 * dt;
+
+			x3 += vx3 * dt;
+			y3 += vy3 * dt;
+			z3 += vz3 * dt;
+		}
+
+		</script>
+	</body>
+</html>
